@@ -1,11 +1,11 @@
-use askama::{filters::format, Template};
+use askama::Template;
 use axum::{
     http::{self, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::get,
     Router,
 };
-use tracing::info;
+
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -47,6 +47,7 @@ pub fn into_response<T: Template>(t: &T) -> Response {
 #[template(path = "hello.html")]
 struct HelloTemplate {
     name: String, // the field name should match the variable name
+    title: String,
 }
 
 struct HtmlTemplate<T>(T);
@@ -57,7 +58,7 @@ where
 {
     fn into_response(self) -> axum::response::Response {
         match self.0.render() {
-            Ok(html) => Html(html).into_response(),
+            Ok(html) => (StatusCode::NOT_FOUND, Html(html)).into_response(),
             Err(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to render template. Error: {}", err),
@@ -70,6 +71,8 @@ where
 async fn handle_main() -> impl IntoResponse {
     let hello = HelloTemplate {
         name: "nicolas".to_string(),
+        title: "nicolas".to_string(),
     };
-    into_response(&hello)
+    // into_response(&hello)
+    HtmlTemplate(hello)
 }
