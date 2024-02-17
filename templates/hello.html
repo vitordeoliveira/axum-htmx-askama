@@ -1,5 +1,20 @@
 {% extends "base.html" %}
 
 {% block content %}
- <h1 class="text-3xl font-bold underline">Hello my dear {{name}}</h1>
+
+<div class="h-100 w-full flex items-center justify-center bg-teal-lightest font-sans">
+	<div class="bg-white rounded shadow p-6 m-4 w-full lg:w-3/4 lg:max-w-lg">
+        <div class="mb-4">
+            <h1 class="text-grey-600 text-3xl font-bold underline">Todo List</h1>
+            <div class="flex mt-4">
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 mr-4 text-grey-600" id="todo" name="todo" type="text" placeholder="Add Todo" hx-on="change: alert('Clicked!')">
+                <button class="flex-no-shrink p-2 border-2 rounded text-teal-600 border-teal-600 hover:text-white hover:bg-teal-600" id="button" hx-post="/todolist" hx-target="#todo-items" hx-swap="innerHTML" hx-include="#todo">Add</button>
+            </div>
+        </div>
+        <div  id="todo-items" hx-trigger="load" hx-get="/gettodos" hx-swap="innerHTML">
+            
+        </div>
+    </div>
+</div>
+
 {% endblock %}

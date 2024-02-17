@@ -1,12 +1,22 @@
+use std::sync::{Arc, Mutex};
+
 use askama::Template;
 use axum::{
-    http::{self, StatusCode},
-    response::{Html, IntoResponse, Response},
-    routing::get,
-    Router,
+    extract::State,
+    http::{header, StatusCode},
+    response::{Html, IntoResponse},
+    routing::{get, post},
+    Form, Router,
 };
 
+use serde::Deserialize;
+use tracing::info;
 use tracing_subscriber::EnvFilter;
+
+#[derive(Debug)]
+struct AppState {
+    todos: Mutex<Vec<Option<String>>>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
@@ -16,7 +26,16 @@ async fn main() -> Result<(), ()> {
 
     tracing::info!("initializing router...");
 
-    let router = Router::new().route("/", get(handle_main));
+    let app_state = Arc::new(AppState {
+        todos: Mutex::new(vec![]),
+    });
+
+    let router = Router::new()
+        .route("/", get(handle_main))
+        .route("/todolist", post(add_todo_item))
+        .route("/gettodos", get(get_todos))
+        .with_state(app_state);
+
     let port = 8000_u16;
 
     tracing::info!("router initialized, now listening on port {}", port);
@@ -24,29 +43,15 @@ async fn main() -> Result<(), ()> {
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{port}"))
         .await
         .unwrap();
+
     axum::serve(listener, router).await.unwrap();
 
     Ok(())
 }
 
-pub fn into_response<T: Template>(t: &T) -> Response {
-    match t.render() {
-        Ok(body) => {
-            let headers = [(
-                http::header::CONTENT_TYPE,
-                http::HeaderValue::from_static(T::MIME_TYPE),
-            )];
-
-            (headers, body).into_response()
-        }
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
-}
-
 #[derive(Template)]
 #[template(path = "hello.html")]
 struct HelloTemplate {
-    name: String, // the field name should match the variable name
     title: String,
 }
 
@@ -58,7 +63,7 @@ where
 {
     fn into_response(self) -> axum::response::Response {
         match self.0.render() {
-            Ok(html) => (StatusCode::NOT_FOUND, Html(html)).into_response(),
+            Ok(html) => (StatusCode::OK, [(header::SERVER, "axum")], Html(html)).into_response(),
             Err(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to render template. Error: {}", err),
@@ -68,11 +73,50 @@ where
     }
 }
 
+#[derive(Template)]
+#[template(path = "todoitem.html")]
+struct TodoList {
+    todos: Vec<String>,
+}
+
 async fn handle_main() -> impl IntoResponse {
     let hello = HelloTemplate {
-        name: "nicolas".to_string(),
-        title: "nicolas".to_string(),
+        title: "RUST AXUM ASKAMA HTMX TODO".to_string(),
     };
-    // into_response(&hello)
     HtmlTemplate(hello)
+}
+
+#[derive(Debug, Deserialize)]
+struct TodoRequest {
+    todo: String,
+}
+
+// #[instrument(skip(state))]
+async fn add_todo_item(
+    State(state): State<Arc<AppState>>,
+    Form(todo): Form<TodoRequest>,
+) -> impl IntoResponse {
+    if todo.todo.is_empty() {
+        return Err(());
+    }
+
+    info!("just printing;");
+    let mut todos = state.todos.lock().unwrap();
+
+    todos.push(Some(todo.todo.to_string()));
+
+    let collect: Vec<String> = todos.clone().into_iter().flatten().collect();
+
+    let template = TodoList { todos: collect };
+    Ok(HtmlTemplate(template))
+}
+
+// #[tracing::instrument]
+async fn get_todos(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let todos = state.todos.lock().unwrap();
+
+    let collect: Vec<String> = todos.clone().into_iter().flatten().collect();
+
+    let template = TodoList { todos: collect };
+    HtmlTemplate(template)
 }

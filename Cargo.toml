@@ -7,11 +7,11 @@ edition = "2021"
 
 [dependencies]
 askama = "0.12.1"
-axum = "0.7.4"
+axum = { version = "0.7.4", features = ["form"] }
 config = "0.14.0"
 serde = { version = "1.0.196", features = ["derive"] }
 tokio = { version = "1.36.0", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.5.1", features = ["fs"] }
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["attributes"] }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
