@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use askama::Template;
 use axum::{
     extract::State,
-    http::{header, StatusCode},
+    http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse},
     routing::{get, post},
     Form, Router,
@@ -62,8 +62,12 @@ where
     T: Template,
 {
     fn into_response(self) -> axum::response::Response {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::SERVER, "axum".parse().unwrap());
+        // This is how send a custom event from server to HTMX
+        // headers.insert("HX-Trigger", "myevent".parse().unwrap());
         match self.0.render() {
-            Ok(html) => (StatusCode::OK, [(header::SERVER, "axum")], Html(html)).into_response(),
+            Ok(html) => (StatusCode::OK, headers, Html(html)).into_response(),
             Err(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to render template. Error: {}", err),
