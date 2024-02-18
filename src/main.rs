@@ -122,7 +122,7 @@ async fn add_todo_item(
     let newid = if todos.is_empty() {
         0
     } else {
-        todos.last().unwrap().as_ref().map_or(0, |todo| todo.id + 1)
+        todos.last().unwrap().clone().map_or(0, |todo| todo.id + 1)
     };
 
     // let newid = if todos.last().is_some() {
