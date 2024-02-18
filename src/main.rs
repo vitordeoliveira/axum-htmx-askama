@@ -2,15 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use askama::Template;
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse},
-    routing::{get, post},
+    routing::{delete, get, post},
     Form, Router,
 };
 
 use serde::Deserialize;
-use tracing::info;
+use tracing::{info, instrument};
 use tracing_subscriber::EnvFilter;
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ struct AppState {
     todos: Mutex<Vec<Option<Todo>>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 struct Todo {
     id: u16,
     value: String,
@@ -46,6 +46,8 @@ async fn main() -> Result<(), ()> {
     let router = Router::new()
         .route("/", get(handle_main))
         .route("/todolist", post(add_todo_item))
+        .route("/deletetodo/:id", delete(remove_todo_item))
+        .route("/activetodo/:id", post(active_todo))
         .route("/gettodos", get(get_todos))
         .with_state(app_state);
 
@@ -104,20 +106,21 @@ async fn handle_main() -> impl IntoResponse {
 }
 
 #[derive(Debug, Deserialize)]
-struct TodoRequest {
+struct AddTodoRequest {
     todo: String,
 }
 
-// #[instrument(skip(state))]
+#[instrument(skip(state))]
 async fn add_todo_item(
     State(state): State<Arc<AppState>>,
-    Form(todo): Form<TodoRequest>,
+    Form(todo): Form<AddTodoRequest>,
 ) -> impl IntoResponse {
+    info!("just printing;");
+
     if todo.todo.is_empty() {
         return Err(());
     }
 
-    info!("just printing;");
     let mut todos = state.todos.lock().unwrap();
     let newid = if todos.is_empty() {
         0
@@ -133,17 +136,29 @@ async fn add_todo_item(
 
     todos.push(Some(Todo::new(newid, todo.todo, false)));
 
+    println!("{:?}", todos);
     let collect: Vec<Todo> = todos.clone().into_iter().flatten().collect();
 
     let template = TodoList { todos: collect };
+
     Ok(HtmlTemplate(template))
+}
+
+#[derive(Debug, Deserialize)]
+struct RemoveTodoRequest {
+    id: u16,
 }
 
 async fn remove_todo_item(
     State(state): State<Arc<AppState>>,
-    Form(todo): Form<TodoRequest>,
+    Path(id): Path<RemoveTodoRequest>,
 ) -> impl IntoResponse {
     let mut todos = state.todos.lock().unwrap();
+    todos.retain(|item| item.as_ref().map_or(true, |t| t.id != id.id));
+
+    let mut headers = HeaderMap::new();
+    headers.insert("HX-Trigger", "reload-todos".parse().unwrap());
+    (StatusCode::OK, headers).into_response()
 }
 
 // #[tracing::instrument]
@@ -154,4 +169,28 @@ async fn get_todos(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 
     let template = TodoList { todos: collect };
     HtmlTemplate(template)
+}
+
+async fn active_todo(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<RemoveTodoRequest>,
+) -> impl IntoResponse {
+    let mut todos = state.todos.lock().unwrap();
+
+    // todos
+    //     .into_iter()
+    //     .map(|item| item.unwrap().active = !item.unwrap().active)
+    //     .collect()::Vec<Todo>;
+
+    todos.iter_mut().for_each(|item| {
+        if let Some(todo) = item.as_mut() {
+            if todo.id == id.id {
+                todo.active = !todo.active; // ou qualquer valor desejado para todo.active
+            }
+        }
+    });
+
+    let mut headers = HeaderMap::new();
+    headers.insert("HX-Trigger", "reload-todos".parse().unwrap());
+    (StatusCode::OK, headers).into_response()
 }
