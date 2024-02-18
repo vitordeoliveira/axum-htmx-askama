@@ -15,7 +15,20 @@ use tracing_subscriber::EnvFilter;
 
 #[derive(Debug)]
 struct AppState {
-    todos: Mutex<Vec<Option<String>>>,
+    todos: Mutex<Vec<Option<Todo>>>,
+}
+
+#[derive(Debug, Clone)]
+struct Todo {
+    id: u16,
+    value: String,
+    active: bool,
+}
+
+impl Todo {
+    fn new(id: u16, value: String, active: bool) -> Self {
+        Self { id, value, active }
+    }
 }
 
 #[tokio::main]
@@ -80,7 +93,7 @@ where
 #[derive(Template)]
 #[template(path = "todoitem.html")]
 struct TodoList {
-    todos: Vec<String>,
+    todos: Vec<Todo>,
 }
 
 async fn handle_main() -> impl IntoResponse {
@@ -106,20 +119,38 @@ async fn add_todo_item(
 
     info!("just printing;");
     let mut todos = state.todos.lock().unwrap();
+    let newid = if todos.is_empty() {
+        0
+    } else {
+        todos.last().unwrap().as_ref().map_or(0, |todo| todo.id + 1)
+    };
 
-    todos.push(Some(todo.todo.to_string()));
+    // let newid = if todos.last().is_some() {
+    //     todos.last().unwrap().clone().unwrap().id + 1
+    // } else {
+    //     0
+    // };
 
-    let collect: Vec<String> = todos.clone().into_iter().flatten().collect();
+    todos.push(Some(Todo::new(newid, todo.todo, false)));
+
+    let collect: Vec<Todo> = todos.clone().into_iter().flatten().collect();
 
     let template = TodoList { todos: collect };
     Ok(HtmlTemplate(template))
+}
+
+async fn remove_todo_item(
+    State(state): State<Arc<AppState>>,
+    Form(todo): Form<TodoRequest>,
+) -> impl IntoResponse {
+    let mut todos = state.todos.lock().unwrap();
 }
 
 // #[tracing::instrument]
 async fn get_todos(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let todos = state.todos.lock().unwrap();
 
-    let collect: Vec<String> = todos.clone().into_iter().flatten().collect();
+    let collect: Vec<Todo> = todos.clone().into_iter().flatten().collect();
 
     let template = TodoList { todos: collect };
     HtmlTemplate(template)
