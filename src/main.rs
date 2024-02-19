@@ -13,6 +13,8 @@ use serde::Deserialize;
 use tracing::{info, instrument};
 use tracing_subscriber::EnvFilter;
 
+mod web;
+
 #[derive(Debug)]
 struct AppState {
     todos: Mutex<Vec<Option<Todo>>>,
@@ -48,7 +50,7 @@ async fn main() -> Result<(), ()> {
         .route("/todolist", post(add_todo_item))
         .route("/deletetodo/:id", delete(remove_todo_item))
         .route("/activetodo/:id", post(active_todo))
-        .route("/gettodos", get(get_todos))
+        // .route("/gettodos", get(get_todos))
         .with_state(app_state);
 
     let port = 8000_u16;
@@ -136,7 +138,6 @@ async fn add_todo_item(
 
     todos.push(Some(Todo::new(newid, todo.todo, false)));
 
-    println!("{:?}", todos);
     let collect: Vec<Todo> = todos.clone().into_iter().flatten().collect();
 
     let template = TodoList { todos: collect };
@@ -162,14 +163,6 @@ async fn remove_todo_item(
 }
 
 // #[tracing::instrument]
-async fn get_todos(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let todos = state.todos.lock().unwrap();
-
-    let collect: Vec<Todo> = todos.clone().into_iter().flatten().collect();
-
-    let template = TodoList { todos: collect };
-    HtmlTemplate(template)
-}
 
 async fn active_todo(
     State(state): State<Arc<AppState>>,
