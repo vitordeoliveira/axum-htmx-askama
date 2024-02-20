@@ -39,9 +39,6 @@ where
 pub fn routes(mc: ModelController) -> Router {
     let app_state = AppState { mc };
     Router::new()
-        .route("/gettodos", get(get_todos))
-        // .route("/todolist", post(add_todo_item))
-        // .route("/deletetodo/:id", delete(remove_todo_item))
         // .route("/activetodo/:id", post(active_todo));
         .route("/addtodo", post(add_todo_item))
         .route("/deletetodo/:id", delete(remove_todo_item))
@@ -77,21 +74,14 @@ async fn add_todo_item(
     Ok(HtmlTemplate(template))
 }
 
-#[derive(Debug, Deserialize)]
-struct RemoveTodoRequest {
-    id: u16,
-}
 
 async fn remove_todo_item(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<RemoveTodoRequest>,
-) -> impl IntoResponse {
-    let mut todos = state.todos.lock().unwrap();
-    todos.retain(|item| item.as_ref().map_or(true, |t| t.id != id.id));
+    State(mc): State<ModelController>,
+    Path(id): Path<u16>,
+) -> Result<impl IntoResponse, ()> {
+    mc.delete_todo(id).await?;
 
-    let mut headers = HeaderMap::new();
-    headers.insert("HX-Trigger", "reload-todos".parse().unwrap());
-    (StatusCode::OK, headers).into_response()
+    Ok(())
 }
 
 // #[tracing::instrument]
