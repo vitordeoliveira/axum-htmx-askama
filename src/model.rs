@@ -9,9 +9,9 @@ struct AppState {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Todo {
-    id: u16,
-    value: String,
-    active: bool,
+    pub id: u16,
+    pub value: String,
+    pub active: bool,
 }
 
 // impl Todo {
@@ -41,5 +41,21 @@ impl ModelController {
         let store = self.todos_store.lock().unwrap();
         let todos = store.iter().filter_map(|i| i.clone()).collect();
         Ok(todos)
+    }
+
+    pub async fn add_todos(&self, value: String) -> Result<Todo, ()> {
+        let mut store = self.todos_store.lock().unwrap();
+
+        let newid = store.len() as u16;
+
+        let todo = Todo {
+            id: newid,
+            active: false,
+            value,
+        };
+
+        store.push(Some(todo.clone()));
+
+        Ok(todo)
     }
 }
