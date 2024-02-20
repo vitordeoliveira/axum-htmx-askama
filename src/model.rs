@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use serde::Deserialize;
+use tracing::info;
 
 #[derive(Debug)]
 struct AppState {
@@ -57,5 +58,14 @@ impl ModelController {
         store.push(Some(todo.clone()));
 
         Ok(todo)
+    }
+
+    pub async fn delete_todo(&self, id: u16) -> Result<(), ()> {
+        info!("delete_todo");
+        let mut store = self.todos_store.lock().unwrap();
+
+        store.retain(|i| i.as_ref().unwrap().id != id);
+
+        Ok(())
     }
 }

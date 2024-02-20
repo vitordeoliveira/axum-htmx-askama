@@ -1,10 +1,10 @@
 use crate::model::*;
 use askama::Template;
 use axum::{
-    extract::{FromRef, State},
+    extract::{FromRef, Path, State},
     http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse},
-    routing::get,
+    routing::{delete, on, post},
     Form, Router,
 };
 use serde::Deserialize;
@@ -43,24 +43,11 @@ pub fn routes(mc: ModelController) -> Router {
         // .route("/todolist", post(add_todo_item))
         // .route("/deletetodo/:id", delete(remove_todo_item))
         // .route("/activetodo/:id", post(active_todo));
-        // .route("/gettodos", get(get_todos))
+        .route("/addtodo", post(add_todo_item))
+        .route("/deletetodo/:id", delete(remove_todo_item))
         .with_state(app_state)
 }
 
-#[derive(Template)]
-#[template(path = "todoitem.html")]
-struct TodoList {
-    todos: Vec<Todo>,
-}
-
-async fn get_todos(State(mc): State<ModelController>) -> Result<impl IntoResponse, ()> {
-    let todos = mc.get_todos().await?;
-
-    // let collect: Vec<Todo> = todos.clone().into_iter().flatten().collect();
-
-    let template = TodoList { todos };
-    Ok(HtmlTemplate(template))
-}
 
 #[derive(Debug, Deserialize)]
 struct AddTodoRequest {
