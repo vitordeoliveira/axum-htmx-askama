@@ -4,7 +4,7 @@ use axum::{
     extract::{FromRef, Path, State},
     http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse},
-    routing::{delete, on, post},
+    routing::{delete, post},
     Form, Router,
 };
 use serde::Deserialize;
@@ -23,8 +23,6 @@ where
     fn into_response(self) -> axum::response::Response {
         let mut headers = HeaderMap::new();
         headers.insert(header::SERVER, "axum".parse().unwrap());
-        // This is how send a custom event from server to HTMX
-        // headers.insert("HX-Trigger", "myevent".parse().unwrap());
         match self.0.render() {
             Ok(html) => (StatusCode::OK, headers, Html(html)).into_response(),
             Err(err) => (
@@ -39,12 +37,11 @@ where
 pub fn routes(mc: ModelController) -> Router {
     let app_state = AppState { mc };
     Router::new()
-        // .route("/activetodo/:id", post(active_todo));
         .route("/addtodo", post(add_todo_item))
         .route("/deletetodo/:id", delete(remove_todo_item))
+        // .route("/activetodo/:id", post(active_todo));
         .with_state(app_state)
 }
-
 
 #[derive(Debug, Deserialize)]
 struct AddTodoRequest {
@@ -74,7 +71,6 @@ async fn add_todo_item(
     Ok(HtmlTemplate(template))
 }
 
-
 async fn remove_todo_item(
     State(mc): State<ModelController>,
     Path(id): Path<u16>,
@@ -84,28 +80,21 @@ async fn remove_todo_item(
     Ok(())
 }
 
-// #[tracing::instrument]
-
 async fn active_todo(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<RemoveTodoRequest>,
-) -> impl IntoResponse {
-    let mut todos = state.todos.lock().unwrap();
+    State(mc): State<ModelController>,
+    Path(id): Path<u16>,
+) -> Result<impl IntoResponse, ()> {
+    let todo = mc.toggle_todo(id).await?;
 
-    // todos
-    //     .into_iter()
-    //     .map(|item| item.unwrap().active = !item.unwrap().active)
-    //     .collect()::Vec<Todo>;
+    let template = TodoItem { todo };
 
-    todos.iter_mut().for_each(|item| {
-        if let Some(todo) = item.as_mut() {
-            if todo.id == id.id {
-                todo.active = !todo.active; // ou qualquer valor desejado para todo.active
-            }
-        }
-    });
+    // todos.iter_mut().for_each(|item| {
+    //     if let Some(todo) = item.as_mut() {
+    //         if todo.id == id.id {
+    //             todo.active = !todo.active; // ou qualquer valor desejado para todo.active
+    //         }
+    //     }
+    // });
 
-    let mut headers = HeaderMap::new();
-    headers.insert("HX-Trigger", "reload-todos".parse().unwrap());
-    (StatusCode::OK, headers).into_response()
+    Ok(HtmlTemplate(template))
 }
