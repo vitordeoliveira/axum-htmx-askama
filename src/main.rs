@@ -1,19 +1,14 @@
-use std::sync::{Arc, Mutex};
-
 use askama::Template;
 use axum::{
-    extract::{Path, State},
-    handler::Handler,
+    extract::State,
     http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse},
-    routing::{delete, get, get_service, post},
-    Form, Router,
+    routing::{get, get_service},
+    Router,
 };
 
 use model::Todo;
-use serde::Deserialize;
 use tower_http::services::ServeDir;
-use tracing::{info, instrument};
 use tracing_subscriber::EnvFilter;
 
 use crate::model::ModelController;
@@ -45,8 +40,6 @@ async fn main() -> Result<(), ()> {
         .nest("/api", routes_apis)
         .fallback_service(routes_static());
 
-    // .with_state(app_state);
-
     let port = 8000_u16;
 
     tracing::info!("router initialized, now listening on port {}", port);
@@ -76,8 +69,6 @@ where
     fn into_response(self) -> axum::response::Response {
         let mut headers = HeaderMap::new();
         headers.insert(header::SERVER, "axum".parse().unwrap());
-        // This is how send a custom event from server to HTMX
-        // headers.insert("HX-Trigger", "myevent".parse().unwrap());
         match self.0.render() {
             Ok(html) => (StatusCode::OK, headers, Html(html)).into_response(),
             Err(err) => (
