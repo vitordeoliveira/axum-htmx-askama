@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use serde::Deserialize;
-use tracing::info;
+use tracing::{info, Value};
 
 #[derive(Debug)]
 struct AppState {
@@ -67,5 +67,40 @@ impl ModelController {
         store.retain(|i| i.as_ref().unwrap().id != id);
 
         Ok(())
+    }
+
+    pub async fn toggle_todo(&self, id: u16) -> Result<Todo, ()> {
+        info!("toggle_todo");
+
+        let mut store = self.todos_store.lock().unwrap();
+
+        // let mut changed: Option<Todo> = None;
+
+        if let Some(todo) = store
+            .iter_mut()
+            .find(|t| t.is_some() && t.as_ref().unwrap().id == id)
+        {
+            todo.as_mut().unwrap().active = !todo.as_ref().unwrap().active;
+            return Ok(todo.as_ref().unwrap().clone());
+        }
+
+        Err(())
+
+        //
+        // store.iter_mut().for_each(|t| {
+        //     if let Some(todo) = t.as_mut() {
+        //         if todo.id == id {
+        //             todo.active = !todo.active;
+        //             changed = Some(todo.clone());
+        //         }
+        //     }
+        // });
+
+        // match changed {
+        //     Some(todo) => Ok(todo),
+        //     None => Err(()),
+        // }
+        //
+        // Ok(Todo::new())
     }
 }
