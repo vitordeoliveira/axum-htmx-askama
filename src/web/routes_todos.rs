@@ -1,4 +1,4 @@
-use crate::model::*;
+use crate::{error::Result, model::*};
 use askama::Template;
 use axum::{
     extract::{FromRef, Path, State},
@@ -57,11 +57,11 @@ struct TodoItem {
 async fn add_todo_item(
     State(mc): State<ModelController>,
     Form(todo): Form<AddTodoRequest>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse> {
     tracing::info!("add_todo_item");
 
     if todo.value.is_empty() {
-        return Err(());
+        return Err(crate::error::Error::InternalServerError);
     }
 
     let todo = mc.add_todos(todo.value).await?;
@@ -74,7 +74,7 @@ async fn add_todo_item(
 async fn remove_todo_item(
     State(mc): State<ModelController>,
     Path(id): Path<u16>,
-) -> Result<impl IntoResponse, ()> {
+) -> Result<impl IntoResponse> {
     mc.delete_todo(id).await?;
 
     Ok(())
@@ -83,7 +83,7 @@ async fn remove_todo_item(
 async fn active_todo(
     State(mc): State<ModelController>,
     Path(id): Path<u16>,
-) -> Result<impl IntoResponse, ()> {
+) -> Result<impl IntoResponse> {
     let todo = mc.toggle_todo(id).await?;
 
     let template = TodoItem { todo };

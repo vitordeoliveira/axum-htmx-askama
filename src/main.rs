@@ -7,12 +7,14 @@ use axum::{
     Router,
 };
 
+use error::Result;
 use model::Todo;
 use tower_http::services::ServeDir;
 use tracing_subscriber::EnvFilter;
 
 use crate::model::ModelController;
 
+mod error;
 mod model;
 mod web;
 
@@ -22,7 +24,7 @@ fn routes_static() -> Router {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), ()> {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or("error".into()))
         .init();
@@ -60,36 +62,17 @@ struct HelloTemplate {
     todos: Vec<Todo>,
 }
 
-struct HtmlTemplate<T>(T);
-
-impl<T> IntoResponse for HtmlTemplate<T>
-where
-    T: Template,
-{
-    fn into_response(self) -> axum::response::Response {
-        let mut headers = HeaderMap::new();
-        headers.insert(header::SERVER, "axum".parse().unwrap());
-        match self.0.render() {
-            Ok(html) => (StatusCode::OK, headers, Html(html)).into_response(),
-            Err(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to render template. Error: {}", err),
-            )
-                .into_response(),
-        }
-    }
-}
-
-async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoResponse, ()> {
+async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoResponse> {
     let todos = mc.get_todos().await?;
     let hello = HelloTemplate {
         title: "RUST AXUM ASKAMA HTMX TODO".to_string(),
         todos,
     };
 
-    Ok((StatusCode::OK, Html(hello.render().unwrap())))
+    let html = match hello.render() {
+        Ok(html) => html,
+        Err(_) => return Err(error::Error::InternalServerError),
+    };
 
-    // let val = (StatusCode::OK, hello).into_response();
-
-    // Ok(HtmlTemplate(hello))
+    Ok((StatusCode::OK, Html(html)))
 }
