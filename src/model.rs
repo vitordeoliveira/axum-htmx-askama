@@ -1,12 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use serde::Deserialize;
-use tracing::{info, Value};
-
-#[derive(Debug)]
-struct AppState {
-    todos: Mutex<Vec<Option<Todo>>>,
-}
+use tracing::info;
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Todo {
@@ -14,12 +9,6 @@ pub struct Todo {
     pub value: String,
     pub active: bool,
 }
-
-// impl Todo {
-//     fn new(id: u16, value: String, active: bool) -> Self {
-//         Self { id, value, active }
-//     }
-// }
 
 // constructor
 impl ModelController {
@@ -74,33 +63,30 @@ impl ModelController {
 
         let mut store = self.todos_store.lock().unwrap();
 
-        // let mut changed: Option<Todo> = None;
-
-        if let Some(todo) = store
-            .iter_mut()
-            .find(|t| t.is_some() && t.as_ref().unwrap().id == id)
-        {
-            todo.as_mut().unwrap().active = !todo.as_ref().unwrap().active;
-            return Ok(todo.as_ref().unwrap().clone());
-        }
-
-        Err(())
-
-        //
-        // store.iter_mut().for_each(|t| {
-        //     if let Some(todo) = t.as_mut() {
-        //         if todo.id == id {
-        //             todo.active = !todo.active;
-        //             changed = Some(todo.clone());
-        //         }
-        //     }
-        // });
-
-        // match changed {
-        //     Some(todo) => Ok(todo),
-        //     None => Err(()),
+        // if let Some(todo) = store
+        //     .iter_mut()
+        //     .find(|t| t.is_some() && t.as_ref().unwrap().id == id)
+        // {
+        //     todo.as_mut().unwrap().active = !todo.as_ref().unwrap().active;
+        //     return Ok(todo.as_ref().unwrap().clone());
         // }
         //
-        // Ok(Todo::new())
+        // Err(())
+
+        let mut changed: Option<Todo> = None;
+
+        store.iter_mut().for_each(|t| {
+            if let Some(todo) = t.as_mut() {
+                if todo.id == id {
+                    todo.active = !todo.active;
+                    changed = Some(todo.clone());
+                }
+            }
+        });
+
+        match changed {
+            Some(todo) => Ok(todo),
+            None => Err(()),
+        }
     }
 }
