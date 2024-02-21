@@ -39,7 +39,7 @@ pub fn routes(mc: ModelController) -> Router {
     Router::new()
         .route("/addtodo", post(add_todo_item))
         .route("/deletetodo/:id", delete(remove_todo_item))
-        // .route("/activetodo/:id", post(active_todo));
+        .route("/activetodo/:id", post(active_todo))
         .with_state(app_state)
 }
 
@@ -87,14 +87,6 @@ async fn active_todo(
     let todo = mc.toggle_todo(id).await?;
 
     let template = TodoItem { todo };
-
-    // todos.iter_mut().for_each(|item| {
-    //     if let Some(todo) = item.as_mut() {
-    //         if todo.id == id.id {
-    //             todo.active = !todo.active; // ou qualquer valor desejado para todo.active
-    //         }
-    //     }
-    // });
 
     Ok(HtmlTemplate(template))
 }
