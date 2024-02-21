@@ -86,5 +86,10 @@ async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoRespo
         title: "RUST AXUM ASKAMA HTMX TODO".to_string(),
         todos,
     };
-    Ok(HtmlTemplate(hello))
+
+    Ok((StatusCode::OK, Html(hello.render().unwrap())))
+
+    // let val = (StatusCode::OK, hello).into_response();
+
+    // Ok(HtmlTemplate(hello))
 }
