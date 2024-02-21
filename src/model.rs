@@ -8,7 +8,7 @@ struct AppState {
     todos: Mutex<Vec<Option<Todo>>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Default)]
 pub struct Todo {
     pub id: u16,
     pub value: String,
