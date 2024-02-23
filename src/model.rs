@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use serde::Deserialize;
+use sqlx::{Pool, Postgres};
 use tracing::info;
 
 use crate::error::{Error, Result};
@@ -14,9 +15,11 @@ pub struct Todo {
 
 // constructor
 impl ModelController {
-    pub async fn new() -> Result<Self> {
+    pub async fn new(db: Pool<Postgres>) -> Result<Self> {
+        sqlx::migrate!().run(&db).await?;
         Ok(Self {
             todos_store: Arc::default(),
+            db,
         })
     }
 }
@@ -26,6 +29,7 @@ impl ModelController {
 #[derive(Clone)]
 pub struct ModelController {
     todos_store: Arc<Mutex<Vec<Option<Todo>>>>,
+    db: Pool<Postgres>,
 }
 
 impl ModelController {
@@ -37,6 +41,8 @@ impl ModelController {
 
     pub async fn add_todos(&self, value: String) -> Result<Todo> {
         let mut store = self.todos_store.lock().unwrap();
+
+        // TODO: add on the database
 
         let newid = store.len() as u16;
 

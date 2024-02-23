@@ -1,18 +1,22 @@
+use std::env;
+
 use askama::Template;
 use axum::{
     extract::State,
-    http::{header, HeaderMap, StatusCode},
+    http::StatusCode,
     response::{Html, IntoResponse},
     routing::{get, get_service},
     Router,
 };
 
+use crate::model::ModelController;
 use error::Result;
 use model::Todo;
+use sqlx::postgres::PgPoolOptions;
 use tower_http::services::ServeDir;
 use tracing_subscriber::EnvFilter;
 
-use crate::model::ModelController;
+use dotenv::dotenv;
 
 mod error;
 mod model;
@@ -25,13 +29,20 @@ fn routes_static() -> Router {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv().ok();
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or("error".into()))
         .init();
 
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL to be set");
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&db_url)
+        .await?;
+
     tracing::info!("initializing router...");
 
-    let mc = ModelController::new().await?;
+    let mc = ModelController::new(pool).await?;
 
     let routes_apis = web::routes_todos::routes(mc.clone());
     // .route_layer(middleware::from_fn(web::mw_auth::mw_require_auth));
@@ -71,7 +82,7 @@ async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoRespo
 
     let html = match hello.render() {
         Ok(html) => html,
-        Err(_) => return Err(error::Error::InternalServerError),
+        Err(_) => return Err(error::Error::InternalServer),
     };
 
     Ok((StatusCode::OK, Html(html)))

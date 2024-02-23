@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - volume_name:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: axum_htmx_askama
+
+volumes:
+  volume_name: # <- Rename "volume_name"
+    name: volume_name # <- Rename "volume_name"

@@ -61,7 +61,7 @@ async fn add_todo_item(
     tracing::info!("add_todo_item");
 
     if todo.value.is_empty() {
-        return Err(crate::error::Error::InternalServerError);
+        return Err(crate::error::Error::InternalServer);
     }
 
     let todo = mc.add_todos(todo.value).await?;
