@@ -1,7 +1,10 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    env,
+    sync::{Arc, Mutex},
+};
 
 use serde::Deserialize;
-use sqlx::{Pool, Postgres};
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
 use tracing::info;
 
 use crate::error::{Error, Result};
@@ -13,12 +16,43 @@ pub struct Todo {
     pub active: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct Todo1 {
+    pub id: sqlx::types::Uuid,
+    pub value: String,
+    pub active: bool,
+}
+
+impl Todo1 {
+    pub async fn get_todos(mc: ModelController) -> Result<Vec<Self>> {
+        let rows = sqlx::query_as!(Todo1, "SELECT * FROM todo")
+            .fetch_all(mc.db())
+            .await
+            .unwrap();
+
+        Ok(rows)
+    }
+}
+
 // constructor
 impl ModelController {
     pub async fn new() -> Result<Self> {
+        let db_url = env::var("DATABASE_URL").expect("DATABASE_URL to be set");
+        let pool = PgPoolOptions::new()
+            .max_connections(5)
+            .connect(&db_url)
+            .await?;
+
+        sqlx::migrate!().run(&pool).await?;
+
         Ok(Self {
             todos_store: Arc::default(),
+            db: pool,
         })
+    }
+
+    pub fn db(&self) -> &Pool<Postgres> {
+        &self.db
     }
 }
 
@@ -27,11 +61,13 @@ impl ModelController {
 #[derive(Clone)]
 pub struct ModelController {
     todos_store: Arc<Mutex<Vec<Option<Todo>>>>,
+    db: Pool<Postgres>,
 }
 
 impl ModelController {
     pub async fn get_todos(&self) -> Result<Vec<Todo>> {
         let store = self.todos_store.lock().unwrap();
+
         let todos = store.iter().filter_map(|i| i.clone()).collect();
         Ok(todos)
     }
@@ -40,6 +76,7 @@ impl ModelController {
         let mut store = self.todos_store.lock().unwrap();
 
         // TODO: add on the database
+        // let db = self.db();
 
         let newid = store.len() as u16;
 
