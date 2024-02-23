@@ -42,7 +42,8 @@ async fn main() -> Result<()> {
 
     tracing::info!("initializing router...");
 
-    let mc = ModelController::new(pool).await?;
+    sqlx::migrate!().run(&pool).await?;
+    let mc = ModelController::new().await?;
 
     let routes_apis = web::routes_todos::routes(mc.clone());
     // .route_layer(middleware::from_fn(web::mw_auth::mw_require_auth));

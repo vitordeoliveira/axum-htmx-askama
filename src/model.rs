@@ -15,11 +15,9 @@ pub struct Todo {
 
 // constructor
 impl ModelController {
-    pub async fn new(db: Pool<Postgres>) -> Result<Self> {
-        sqlx::migrate!().run(&db).await?;
+    pub async fn new() -> Result<Self> {
         Ok(Self {
             todos_store: Arc::default(),
-            db,
         })
     }
 }
@@ -29,7 +27,6 @@ impl ModelController {
 #[derive(Clone)]
 pub struct ModelController {
     todos_store: Arc<Mutex<Vec<Option<Todo>>>>,
-    db: Pool<Postgres>,
 }
 
 impl ModelController {
