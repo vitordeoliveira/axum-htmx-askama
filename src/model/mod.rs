@@ -1,6 +1,5 @@
 use std::env;
 
-use serde::Deserialize;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 use crate::error::Result;

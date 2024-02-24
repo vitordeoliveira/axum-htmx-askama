@@ -1,26 +1,17 @@
 use std::env;
 
-use askama::Template;
 use axum::{
-    extract::State,
-    http::StatusCode,
-    response::{Html, IntoResponse},
     routing::{get, get_service},
     Router,
 };
 
-use crate::model::ModelController;
-use error::Result;
-use model::Todo;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::services::ServeDir;
 use tracing_subscriber::EnvFilter;
 
 use dotenv::dotenv;
 
-mod error;
-mod model;
-mod web;
+use axum_htmx_askama::{error::Result, model::ModelController, view::home::handle_main, web};
 
 fn routes_static() -> Router {
     println!("->> {:<12} - routes_static", "CALLED");
@@ -65,26 +56,4 @@ async fn main() -> Result<()> {
     axum::serve(listener, router).await.unwrap();
 
     Ok(())
-}
-
-#[derive(Template)]
-#[template(path = "home.html")]
-struct HelloTemplate {
-    title: String,
-    todos: Vec<Todo>,
-}
-
-async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoResponse> {
-    let todos = mc.get_todos().await?;
-    let hello = HelloTemplate {
-        title: "RUST AXUM ASKAMA HTMX TODO".to_string(),
-        todos,
-    };
-
-    let html = match hello.render() {
-        Ok(html) => html,
-        Err(_) => return Err(error::Error::InternalServer),
-    };
-
-    Ok((StatusCode::OK, Html(html)))
 }
