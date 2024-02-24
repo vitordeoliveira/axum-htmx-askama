@@ -68,15 +68,7 @@ pub struct ModelController {
 
 impl ModelController {
     pub async fn get_todos(&self) -> Result<Vec<Todo1>> {
-        let store = match &self.todos_store.try_lock() {
-            Ok(store) => store,
-            Err(_) => {
-                return Err(Error::InternalServer); // Return a custom error for simplicity
-            }
-        };
-
         let todos = Todo1::get_todos(self).await?;
-        // let todos = store.iter().filter_map(|i| i.clone()).collect();
         Ok(todos)
     }
 
