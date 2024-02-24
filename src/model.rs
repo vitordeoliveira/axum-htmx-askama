@@ -23,6 +23,11 @@ impl Todo {
     }
 
     pub async fn add_todos(mc: &ModelController, value: String) -> Result<Self> {
+        // let insert_query = format!("INSERT INTO todo(value) VALUES ('{value}') RETURNING *");
+        // let rows = sqlx::query_as::<_, Todo>(&insert_query)
+        //     .fetch_one(mc.db())
+        //     .await?;
+
         let rows = sqlx::query_as::<_, Todo>("INSERT INTO todo(value) VALUES ($1) RETURNING *")
             .bind(value)
             .fetch_one(mc.db())
