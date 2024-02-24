@@ -11,7 +11,7 @@ use axum::{
 
 use crate::model::ModelController;
 use error::Result;
-use model::{Todo, Todo1};
+use model::Todo;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::services::ServeDir;
 use tracing_subscriber::EnvFilter;
@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
 #[template(path = "home.html")]
 struct HelloTemplate {
     title: String,
-    todos: Vec<Todo1>,
+    todos: Vec<Todo>,
 }
 
 async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoResponse> {
@@ -80,10 +80,6 @@ async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoRespo
         title: "RUST AXUM ASKAMA HTMX TODO".to_string(),
         todos,
     };
-
-    let test = Todo1::get_todos(&mc).await?;
-
-    println!("{test:?}");
 
     let html = match hello.render() {
         Ok(html) => html,

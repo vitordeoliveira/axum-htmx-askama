@@ -1,34 +1,52 @@
-use std::{
-    env,
-    sync::{Arc, Mutex},
-};
+use std::env;
 
 use serde::Deserialize;
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
-use tracing::info;
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Todo {
-    pub id: u16,
-    pub value: String,
-    pub active: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct Todo1 {
     pub id: sqlx::types::Uuid,
     pub value: String,
     pub active: bool,
 }
 
-impl Todo1 {
+impl Todo {
     pub async fn get_todos(mc: &ModelController) -> Result<Vec<Self>> {
-        let rows = sqlx::query_as!(Todo1, "SELECT * FROM todo")
+        let rows = sqlx::query_as::<_, Todo>("SELECT * FROM todo")
             .fetch_all(mc.db())
             .await
             .unwrap();
+
+        Ok(rows)
+    }
+
+    pub async fn add_todos(mc: &ModelController, value: String) -> Result<Self> {
+        let rows = sqlx::query_as::<_, Todo>("INSERT INTO todo(value) VALUES ($1) RETURNING *")
+            .bind(value)
+            .fetch_one(mc.db())
+            .await?;
+
+        Ok(rows)
+    }
+
+    pub async fn delete_todo(mc: &ModelController, id: sqlx::types::Uuid) -> Result<()> {
+        sqlx::query_as::<_, Todo>("DELETE FROM todo WHERE id = $1 RETURNING *")
+            .bind(id)
+            .fetch_one(mc.db())
+            .await?;
+
+        Ok(())
+    }
+
+    async fn toggle_todo(mc: &ModelController, id: uuid::Uuid) -> Result<Self> {
+        let rows = sqlx::query_as::<_, Todo>(
+            "UPDATE todo SET active = NOT active WHERE id = $1 RETURNING *",
+        )
+        .bind(id)
+        .fetch_one(mc.db())
+        .await?;
 
         Ok(rows)
     }
@@ -45,13 +63,8 @@ impl ModelController {
 
         sqlx::migrate!().run(&pool).await?;
 
-        Ok(Self {
-            todos_store: Arc::default(),
-            db: pool,
-            test: 10,
-        })
+        Ok(Self { db: pool })
     }
-
     pub fn db(&self) -> &Pool<Postgres> {
         &self.db
     }
@@ -61,74 +74,27 @@ impl ModelController {
 // Clone here just clone the ARC not the Vector
 #[derive(Clone)]
 pub struct ModelController {
-    todos_store: Arc<Mutex<Vec<Option<Todo>>>>,
     db: Pool<Postgres>,
-    test: u16,
 }
 
 impl ModelController {
-    pub async fn get_todos(&self) -> Result<Vec<Todo1>> {
-        let todos = Todo1::get_todos(self).await?;
+    pub async fn get_todos(&self) -> Result<Vec<Todo>> {
+        let todos = Todo::get_todos(self).await?;
         Ok(todos)
     }
 
     pub async fn add_todos(&self, value: String) -> Result<Todo> {
-        let mut store = self.todos_store.lock().unwrap();
-
-        // TODO: add on the database
-        // let db = self.db();
-
-        let newid = store.len() as u16;
-
-        let todo = Todo {
-            id: newid,
-            active: false,
-            value,
-        };
-
-        store.push(Some(todo.clone()));
-
+        let todo = Todo::add_todos(self, value.clone()).await?;
         Ok(todo)
     }
 
-    pub async fn delete_todo(&self, id: u16) -> Result<()> {
-        info!("delete_todo");
-        let mut store = self.todos_store.lock().unwrap();
-
-        store.retain(|i| i.as_ref().unwrap().id != id);
-
+    pub async fn delete_todo(&self, id: sqlx::types::Uuid) -> Result<()> {
+        Todo::delete_todo(self, id).await?;
         Ok(())
     }
 
-    pub async fn toggle_todo(&self, id: u16) -> Result<Todo> {
-        info!("toggle_todo");
-
-        let mut store = self.todos_store.lock().unwrap();
-
-        // if let Some(todo) = store
-        //     .iter_mut()
-        //     .find(|t| t.is_some() && t.as_ref().unwrap().id == id)
-        // {
-        //     todo.as_mut().unwrap().active = !todo.as_ref().unwrap().active;
-        //     return Ok(todo.as_ref().unwrap().clone());
-        // }
-        //
-        // Err(())
-
-        let mut changed: Option<Todo> = None;
-
-        store.iter_mut().for_each(|t| {
-            if let Some(todo) = t.as_mut() {
-                if todo.id == id {
-                    todo.active = !todo.active;
-                    changed = Some(todo.clone());
-                }
-            }
-        });
-
-        match changed {
-            Some(todo) => Ok(todo),
-            None => Err(Error::TodoNotFound { id: (1) }),
-        }
+    pub async fn toggle_todo(&self, id: sqlx::types::Uuid) -> Result<Todo> {
+        let todo = Todo::toggle_todo(self, id).await?;
+        Ok(todo)
     }
 }

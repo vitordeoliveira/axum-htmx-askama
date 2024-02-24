@@ -73,7 +73,7 @@ async fn add_todo_item(
 
 async fn remove_todo_item(
     State(mc): State<ModelController>,
-    Path(id): Path<u16>,
+    Path(id): Path<sqlx::types::Uuid>,
 ) -> Result<impl IntoResponse> {
     mc.delete_todo(id).await?;
 
@@ -82,7 +82,7 @@ async fn remove_todo_item(
 
 async fn active_todo(
     State(mc): State<ModelController>,
-    Path(id): Path<u16>,
+    Path(id): Path<sqlx::types::Uuid>,
 ) -> Result<impl IntoResponse> {
     let todo = mc.toggle_todo(id).await?;
 
