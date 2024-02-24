@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
 #[template(path = "home.html")]
 struct HelloTemplate {
     title: String,
-    todos: Vec<Todo>,
+    todos: Vec<Todo1>,
 }
 
 async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoResponse> {
@@ -81,7 +81,7 @@ async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoRespo
         todos,
     };
 
-    let test = Todo1::get_todos(mc).await?;
+    let test = Todo1::get_todos(&mc).await?;
 
     println!("{test:?}");
 

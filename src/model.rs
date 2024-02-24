@@ -24,7 +24,7 @@ pub struct Todo1 {
 }
 
 impl Todo1 {
-    pub async fn get_todos(mc: ModelController) -> Result<Vec<Self>> {
+    pub async fn get_todos(mc: &ModelController) -> Result<Vec<Self>> {
         let rows = sqlx::query_as!(Todo1, "SELECT * FROM todo")
             .fetch_all(mc.db())
             .await
@@ -48,6 +48,7 @@ impl ModelController {
         Ok(Self {
             todos_store: Arc::default(),
             db: pool,
+            test: 10,
         })
     }
 
@@ -62,13 +63,20 @@ impl ModelController {
 pub struct ModelController {
     todos_store: Arc<Mutex<Vec<Option<Todo>>>>,
     db: Pool<Postgres>,
+    test: u16,
 }
 
 impl ModelController {
-    pub async fn get_todos(&self) -> Result<Vec<Todo>> {
-        let store = self.todos_store.lock().unwrap();
+    pub async fn get_todos(&self) -> Result<Vec<Todo1>> {
+        let store = match &self.todos_store.try_lock() {
+            Ok(store) => store,
+            Err(_) => {
+                return Err(Error::InternalServer); // Return a custom error for simplicity
+            }
+        };
 
-        let todos = store.iter().filter_map(|i| i.clone()).collect();
+        let todos = Todo1::get_todos(self).await?;
+        // let todos = store.iter().filter_map(|i| i.clone()).collect();
         Ok(todos)
     }
 
