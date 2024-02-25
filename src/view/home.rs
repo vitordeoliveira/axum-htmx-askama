@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::{
     error::{self, Result},
-    model::{todo::Todo, ModelController},
+    model::{todo::Todo, ModelManager},
     view::HtmlTemplate,
 };
 
@@ -20,7 +20,7 @@ struct HelloTemplate {
     todos: Vec<Todo>,
 }
 
-pub async fn handle_main(State(mc): State<ModelController>) -> Result<impl IntoResponse> {
+pub async fn handle_main(State(mc): State<ModelManager>) -> Result<impl IntoResponse> {
     let todos = mc.get_todos().await?;
 
     let hello = HelloTemplate {
@@ -48,7 +48,7 @@ struct TodoItem {
 }
 
 pub async fn add_todo_item(
-    State(mc): State<ModelController>,
+    State(mc): State<ModelManager>,
     Form(todo): Form<AddTodoRequest>,
 ) -> Result<impl IntoResponse> {
     tracing::info!("add_todo_item");
@@ -65,7 +65,7 @@ pub async fn add_todo_item(
 }
 
 pub async fn remove_todo_item(
-    State(mc): State<ModelController>,
+    State(mc): State<ModelManager>,
     Path(id): Path<sqlx::types::Uuid>,
 ) -> Result<impl IntoResponse> {
     mc.delete_todo(id).await?;
@@ -74,7 +74,7 @@ pub async fn remove_todo_item(
 }
 
 pub async fn active_todo(
-    State(mc): State<ModelController>,
+    State(mc): State<ModelManager>,
     Path(id): Path<sqlx::types::Uuid>,
 ) -> Result<impl IntoResponse> {
     let todo = mc.toggle_todo(id).await?;

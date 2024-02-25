@@ -7,7 +7,7 @@ use axum::{
     Router,
 };
 
-use crate::model::ModelController;
+use crate::model::ModelManager;
 
 use self::home::{active_todo, add_todo_item, handle_main, remove_todo_item};
 
@@ -16,10 +16,10 @@ pub mod notfound;
 
 #[derive(Clone, FromRef)]
 struct AppState {
-    mc: ModelController,
+    mc: ModelManager,
 }
 
-pub fn routes(mc: ModelController) -> Router {
+pub fn routes(mc: ModelManager) -> Router {
     let app_state = AppState { mc };
     Router::new()
         .route("/", get(handle_main))

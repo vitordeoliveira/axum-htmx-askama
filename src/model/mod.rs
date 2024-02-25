@@ -9,12 +9,12 @@ use self::todo::Todo;
 pub mod todo;
 
 #[derive(Clone)]
-pub struct ModelController {
+pub struct ModelManager {
     db: Pool<Postgres>,
 }
 
 // constructor
-impl ModelController {
+impl ModelManager {
     pub async fn new() -> Result<Self> {
         let db_url = env::var("DATABASE_URL").expect("DATABASE_URL to be set");
         let pool = PgPoolOptions::new()
@@ -31,7 +31,7 @@ impl ModelController {
     }
 }
 
-impl ModelController {
+impl ModelManager {
     pub async fn get_todos(&self) -> Result<Vec<Todo>> {
         let todos = Todo::get_todos(self).await?;
         Ok(todos)

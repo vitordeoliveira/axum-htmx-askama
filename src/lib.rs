@@ -1,3 +1,4 @@
+pub mod controller;
 pub mod data;
 pub mod error;
 pub mod model;
