@@ -17,7 +17,21 @@ async fn main() -> Result<()> {
 
     let mc = ModelManager::new().await?;
     let controller = Controller::new(mc.clone());
-    controller.run_server().await?;
+
+    let router = Router::new()
+        .nest("/", controller.view)
+        .nest("/api", controller.data)
+        .fallback(handler_404);
+
+    let port = 8000_u16;
+
+    tracing::info!("router initialized, now listening on port {}", port);
+
+    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{port}"))
+        .await
+        .unwrap();
+
+    axum::serve(listener, router).await.unwrap();
 
     Ok(())
 }
