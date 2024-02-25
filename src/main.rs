@@ -1,12 +1,8 @@
-use axum::Router;
-
 use tracing_subscriber::EnvFilter;
 
 use dotenv::dotenv;
 
-use axum_htmx_askama::{
-    controller::Controller, error::Result, model::ModelManager, view::notfound::handler_404,
-};
+use axum_htmx_askama::{controller::Controller, error::Result, model::ModelManager};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,13 +13,9 @@ async fn main() -> Result<()> {
 
     let mc = ModelManager::new().await?;
     let controller = Controller::new(mc.clone());
+    let router = controller.get_routes().await?;
 
-    let router = Router::new()
-        .nest("/", controller.view)
-        .nest("/api", controller.data)
-        .fallback(handler_404);
-
-    let port = 8000_u16;
+    let port = std::env::var("SERVER_PORT").unwrap_or("8000".to_string());
 
     tracing::info!("router initialized, now listening on port {}", port);
 
