@@ -1,5 +1,5 @@
 pub mod controller;
-pub mod data;
+mod data;
 pub mod error;
-pub mod model;
-pub mod view;
+mod model;
+mod view;

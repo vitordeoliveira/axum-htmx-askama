@@ -12,11 +12,13 @@ pub struct Controller {
 }
 
 impl Controller {
-    pub fn new(mc: ModelManager) -> Self {
-        Self {
+    pub async fn new() -> Result<Self> {
+        let mc = ModelManager::new().await?;
+
+        Ok(Self {
             view: view::routes(mc.clone()),
             data: Router::new().fallback(handler_404),
-        }
+        })
     }
 
     pub async fn get_routes(self) -> Result<axum::Router> {
