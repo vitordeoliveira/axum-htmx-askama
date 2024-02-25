@@ -18,11 +18,9 @@ async fn main() -> Result<()> {
     let port = std::env::var("SERVER_PORT").unwrap_or("8000".to_string());
 
     tracing::info!("router initialized, now listening on port {}", port);
-
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{port}"))
         .await
         .unwrap();
-
     axum::serve(listener, router).await.unwrap();
 
     Ok(())
